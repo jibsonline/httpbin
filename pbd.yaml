@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: httpbin-pdb
+spec:
+  # Ensure at least 2 out of 3 replicas are available during voluntary
+  # disruptions (e.g., node upgrades).
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: httpbin

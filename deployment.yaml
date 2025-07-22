@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  labels:
+    app: httpbin
+spec:
+  # Running 3 replicas to demonstrate high availability and distribution.
+  replicas: 3
+  selector:
+    matchLabels:
+      app: httpbin
+  template:
+    metadata:
+      labels:
+        app: httpbin
+    spec:
+      # --- Best Practice: High Availability ---
+      # Use a "preferred" anti-affinity rule. This tells the scheduler to try
+      # its best to spread pods across different nodes, but allows it to place
+      # them on the same node if necessary (e.g., in a single-node cluster).
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - httpbin
+              topologyKey: "kubernetes.io/hostname"
+
+      # --- Best Practice: Security ---
+      # Assign the dedicated, least-privilege service account.
+      serviceAccountName: httpbin
+
+      # --- Best Practice: Security Context (Pod Level) ---
+      # Enforce that all containers in the pod run as a non-root user.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001 # A specific, non-zero UID.
+        runAsGroup: 1001
+        fsGroup: 1001
+
+      # Provide a writable in-memory volume for temporary files.
+      # This allows the application to function correctly while keeping the
+      # root filesystem read-only for security.
+      volumes:
+      - name: tmp-volume
+        emptyDir:
+          medium: Memory
+
+      containers:
+      - name: httpbin
+        image: kennethreitz/httpbin
+        imagePullPolicy: IfNotPresent
+
+        # Mount the writable volume at /tmp inside the container.
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+
+        # --- Best Practice: Security Context (Container Level) ---
+        # Lock down the container for least privilege.
+        securityContext:
+          # Prevent privilege escalation.
+          allowPrivilegeEscalation: false
+          # Drop all Linux capabilities.
+          capabilities:
+            drop:
+              - ALL
+          # Make the container's root filesystem immutable.
+          readOnlyRootFilesystem: true
+
+        # --- Best Practice: Health Checks ---
+        # Probes ensure traffic is only sent to healthy, ready pods.
+        # The /uuid endpoint confirms the application logic is working.
+        livenessProbe:
+          httpGet:
+            path: /uuid
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /uuid
+            port: 80
+
+        # --- Best Practice: Resource Claims ---
+        # Requests and limits prevent a single pod from consuming excessive
+        # resources and impacting other workloads on the node.
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+
+        ports:
+        - containerPort: 80
+          name: http
