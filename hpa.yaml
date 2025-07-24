@@ -1,7 +1,7 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: httpbin
+  name: httpbin-hpa
   labels:
     app: httpbin
 spec:
@@ -9,7 +9,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: httpbin
-  minReplicas: 3
+  minReplicas: 1
   maxReplicas: 5
   metrics:
   - type: Resource
@@ -17,5 +17,4 @@ spec:
       name: cpu
       target:
         type: Utilization
-        # Target 80% CPU utilization before scaling up.
         averageUtilization: 80
