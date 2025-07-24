@@ -11,7 +11,6 @@ How to Run and Test
 ```
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
-kubectl apply -f pdb.yaml
 kubectl apply -f hpa.yaml
 ```
 
